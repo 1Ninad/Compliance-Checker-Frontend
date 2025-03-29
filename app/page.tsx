@@ -90,7 +90,7 @@ export default function Home() {
       <div className="flex justify-between items-center mb-12">
         <h1 className="text-3xl font-bold">Document Compliance Checker</h1>
         <a
-          href="https://github.com/yourusername/document-compliance-checker"
+          href="https://github.com/1Ninad/Compliance_Checker_Frontend"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="GitHub repository"
