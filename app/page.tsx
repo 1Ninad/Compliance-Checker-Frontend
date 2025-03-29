@@ -91,15 +91,17 @@ export default function Home() {
   return (
     <main className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-12">
-        <h1 className="text-3xl font-bold">Document Compliance Checker</h1>
+        <h1 className="text-3xl font-bold">IEEE Compliance Checker</h1>
         <a
-          href="https://github.com/1Ninad/Compliance_Checker_Frontend"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="GitHub repository"
-        >
-          <Github className="w-6 h-6" />
-        </a>
+  href="https://github.com/1Ninad/Compliance_Checker_Frontend"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="GitHub repository"
+  className="bg-black text-white rounded-full p-2 hover:scale-105 transition-transform"
+>
+  <Github className="w-5 h-5" />
+</a>
+
       </div>
 
       <div
@@ -111,7 +113,7 @@ export default function Home() {
         onDrop={handleDrop}
       >
         <Upload className="w-12 h-12 text-gray-400 mb-4" />
-        <p className="text-lg mb-2">Drag and drop your PDF here</p>
+        <p className="text-lg mb-2">Upload your IEEE research paper PDF here</p>
         <p className="text-sm text-gray-500 mb-4">or click to browse files</p>
 
         <label htmlFor="file-upload">
