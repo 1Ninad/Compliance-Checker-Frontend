@@ -1,6 +1,6 @@
 import axios from "axios"
 
-const API_BASE_URL = "https://compliance-checker-backend-2w57.onrender.com"
+const API_BASE_URL = "https://compliance-checker-backend-2w57.onrender.com/api"
 
 export const uploadPDF = async (file: File) => {
   const formData = new FormData()
