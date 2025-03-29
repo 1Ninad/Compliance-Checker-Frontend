@@ -9,7 +9,7 @@ import ComplianceReport from "@/components/compliance-report"
 import { Button } from "@/components/ui/button"
 import type { ComplianceReport as ComplianceReportType } from "@/types"
 
-const API_BASE_URL = "https://compliance-checker-backend-2w57.onrender.com/api"
+const API_BASE_URL = "https://compliancecheckerbackend-production.up.railway.app/api"
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
