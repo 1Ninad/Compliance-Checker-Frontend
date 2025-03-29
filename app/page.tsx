@@ -9,6 +9,8 @@ import ComplianceReport from "@/components/compliance-report"
 import { Button } from "@/components/ui/button"
 import type { ComplianceReport as ComplianceReportType } from "@/types"
 
+const API_BASE_URL = "https://compliance-checker-backend-2w57.onrender.com/api"
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -66,7 +68,8 @@ export default function Home() {
     formData.append("file", file)
 
     try {
-      const response = await axios.post("http://localhost:8080/api/pdf/upload", formData, {
+      const response = await axios.post(`${API_BASE_URL}/pdf/upload`, formData, {
+
         headers: {
           "Content-Type": "multipart/form-data",
         },

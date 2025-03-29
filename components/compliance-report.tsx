@@ -7,7 +7,7 @@ interface ComplianceReportProps {
 
 export default function ComplianceReport({ report }: ComplianceReportProps) {
     
-  // Calculate summary if not provided
+
   const items = report.items || []
 
   const summary = report.summary || {
