@@ -115,23 +115,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 text-zinc-100 p-4 md:p-8">
       <header className="max-w-5xl mx-auto mb-12">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-3"
-        >
-          
-          <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500">
-            IEEE Compliance Checker
-          </h1>
-        </motion.div>
+      <div className="flex items-center gap-3">
+  <h1 className="text-3xl md:text-4xl font-bold text-emerald-400 md:text-transparent md:bg-clip-text md:bg-gradient-to-r md:from-emerald-400 md:to-teal-500">
+    IEEE Compliance Checker
+  </h1>
+</div>
+
 
         <a
   href="https://github.com/1Ninad/Compliance_Checker_Frontend"
   target="_blank"
   rel="noopener noreferrer"
-  className="fixed top-6 right-6 z-50 text-zinc-300 hover:text-emerald-400 transition-colors duration-200"
+  className="absolute top-6 right-6 z-50 text-zinc-300 hover:text-emerald-400 transition-colors duration-200"
 >
   <FaGithub className="w-8 h-8" />
 </a>
@@ -196,7 +191,8 @@ export default function Home() {
               <div className="bg-zinc-800/80 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-zinc-700">
                 {file && !report && (
                   <div className="flex flex-col gap-6">
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
+
                       <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                         <FileText className="h-6 w-6 text-emerald-400" />
                       </div>
@@ -207,7 +203,7 @@ export default function Home() {
                       {!isUploading && (
                         <Button
                           onClick={handleUpload}
-                          className="bg-emerald-500 hover:bg-emerald-600 text-zinc-900"
+                          className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-zinc-900"
                           disabled={isUploading}
                         >
                           Check Compliance
