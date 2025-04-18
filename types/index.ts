@@ -5,6 +5,19 @@ export interface ComplianceItem {
   }
   
   export interface ComplianceReport {
+
+    id: number;
+  fileName: string;
+  abstractPresent: boolean;
+  fontCompliant: boolean;
+  columnFormatCompliant: boolean;
+  keywordsPresent: boolean;
+  authorDetailsCompliant: boolean;
+  introNumberingValid: boolean;
+  createdAt: string;
+
+
+
     items: ComplianceItem[]
     summary?: {
       passCount: number

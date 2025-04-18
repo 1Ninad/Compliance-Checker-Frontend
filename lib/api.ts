@@ -18,4 +18,3 @@ export const uploadPDF = async (file: File) => {
     throw error
   }
 }
-

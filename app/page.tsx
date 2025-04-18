@@ -1,12 +1,15 @@
 "use client"
-
-import type React from "react"
-
 import { useState } from "react"
-import { Upload, Github } from "lucide-react"
+import type React from "react"
+import { Upload, FileText, Loader2, AlertCircle} from "lucide-react"
+
+import { FaGithub } from "react-icons/fa";
+
 import axios from "axios"
+import { motion, AnimatePresence } from "framer-motion"
 import ComplianceReport from "@/components/compliance-report"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
 import type { ComplianceReport as ComplianceReportType } from "@/types"
 
 const API_BASE_URL = "https://compliancecheckerbackend-production.up.railway.app/api"
@@ -17,6 +20,7 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false)
   const [report, setReport] = useState<ComplianceReportType | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -63,82 +67,200 @@ export default function Home() {
 
     setIsUploading(true)
     setError(null)
+    setProgress(0)
+
+    // Start progress simulation
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        const newProgress = prev + Math.random() * 15
+        return newProgress >= 95 ? 95 : newProgress 
+      })
+    }, 300)
 
     const formData = new FormData()
     formData.append("file", file)
 
     try {
       const response = await axios.post(`${API_BASE_URL}/pdf/upload`, formData, {
-
         headers: {
           "Content-Type": "multipart/form-data",
         },
       })
 
       if (response.status === 200) {
-        setReport(response.data)
+        setProgress(100)
+        setTimeout(() => {
+          setReport(response.data)
+        }, 500)
       } else {
         setError("Unexpected server response.")
       }
-    } catch (err: Error | unknown) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred during upload"
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error occurred during upload"    
       setError(errorMessage)
     } finally {
+      clearInterval(progressInterval)
       setIsUploading(false)
     }
   }
 
+  const resetAll = () => {
+    setFile(null)
+    setIsUploading(false)
+    setReport(null)
+    setProgress(0)
+    setError(null)
+  }
+
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-12">
-        <h1 className="text-3xl font-bold">IEEE Compliance Checker</h1>
+    <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 text-zinc-100 p-4 md:p-8">
+      <header className="max-w-5xl mx-auto mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center gap-3"
+        >
+          
+          <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500">
+            IEEE Compliance Checker
+          </h1>
+        </motion.div>
+
         <a
   href="https://github.com/1Ninad/Compliance_Checker_Frontend"
   target="_blank"
   rel="noopener noreferrer"
-  aria-label="GitHub repository"
-  className="bg-black text-white rounded-full p-2 hover:scale-105 transition-transform"
+  className="fixed top-6 right-6 z-50 text-zinc-300 hover:text-emerald-400 transition-colors duration-200"
 >
-  <Github className="w-5 h-5" />
+  <FaGithub className="w-8 h-8" />
 </a>
 
-      </div>
 
-      <div
-        className={`border-2 border-dashed rounded-lg p-12 flex flex-col items-center justify-center transition-colors ${
-          isDragging ? "border-gray-400 bg-gray-50" : "border-gray-200"
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <Upload className="w-12 h-12 text-gray-400 mb-4" />
-        <p className="text-lg mb-2">Upload your IEEE research paper PDF here</p>
-        <p className="text-sm text-gray-500 mb-4">or click to browse files</p>
+        <p className="mt-3 text-zinc-400 max-w-2xl">
+          Upload IEEE research paper PDF to analyze its compliance with IEEE formatting requirements
+        </p>
+      </header>
 
-        <label htmlFor="file-upload">
-          <div className="bg-black text-white px-4 py-2 rounded-md cursor-pointer">Select PDF</div>
-          <input id="file-upload" type="file" accept="application/pdf" onChange={handleFileChange} className="hidden" />
-        </label>
+      <main className="max-w-5xl mx-auto">
+        <AnimatePresence mode="wait">
+          {!file && !report ? (
+            <motion.div
+              key="upload"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              className="mb-8"
+            >
+              <div
+                className={`border-2 border-dashed rounded-xl p-8 md:p-12 text-center transition-all duration-200 ${
+                  isDragging
+                    ? "border-emerald-400 bg-emerald-400/10"
+                    : "border-zinc-700 hover:border-zinc-500 bg-zinc-800/50"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-zinc-700/50 flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-emerald-400" />
+                  </div>
+                  <h2 className="text-xl font-semibold">Drop your IEEE paper here</h2>
+                  
+                  <label htmlFor="file-upload">
+                    <div className="mt-4 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-zinc-900 font-medium rounded-lg cursor-pointer transition-colors duration-200">
+                      Click to browse PDF File
+                    </div>
+                    <input id="file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
+                  </label>
 
-        {file && (
-          <p className="mt-4 text-sm">
-            Selected file: <span className="font-medium">{file.name}</span>
-          </p>
-        )}
+                  {error && (
+                    <p className="mt-2 text-red-400 text-sm flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" /> {error}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="file-selected"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-8"
+            >
+              <div className="bg-zinc-800/80 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-zinc-700">
+                {file && !report && (
+                  <div className="flex flex-col gap-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                        <FileText className="h-6 w-6 text-emerald-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg truncate">{file.name}</h3>
+                        <p className="text-zinc-400 text-sm">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                      </div>
+                      {!isUploading && (
+                        <Button
+                          onClick={handleUpload}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-zinc-900"
+                          disabled={isUploading}
+                        >
+                          Check Compliance
+                        </Button>
+                      )}
+                    </div>
 
-        {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
-      </div>
+                    {isUploading && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-zinc-400">Analyzing document...</span>
+                          <span className="text-sm font-medium">{Math.round(progress)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-2 bg-zinc-700">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </Progress>
+                        <div className="flex items-center gap-2 text-sm text-zinc-400">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {progress < 30
+                            ? "Scanning document structure..."
+                            : progress < 60
+                              ? "Checking IEEE formatting rules..."
+                              : progress < 90
+                                ? "Validating against IEEE standards..."
+                                : "Finalizing report..."}
+                        </div>
+                      </div>
+                    )}
 
-      <Button
-        className="w-full mt-6 py-4 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition-colors"
-        onClick={handleUpload}
-        disabled={!file || isUploading}
-      >
-        {isUploading ? "Processing..." : "Check Compliance"}
-      </Button>
+                    {error && (
+                      <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium">Error</p>
+                          <p className="text-sm">{error}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {report && <ComplianceReport report={report} onReset={resetAll} />}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
 
-      {report && <ComplianceReport report={report} />}
-    </main>
+      <footer className="max-w-5xl mx-auto mt-12 text-center text-zinc-500 text-sm">
+        <p>IEEE Compliance Checker</p>
+      </footer>
+    </div>
   )
 }
