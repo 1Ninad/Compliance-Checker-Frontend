@@ -123,7 +123,7 @@ export default function Home() {
 
 
         <a
-  href="https://github.com/1Ninad/Compliance_Checker_Frontend"
+  href="https://github.com/1Ninad/Compliance-Checker-Backend"
   target="_blank"
   rel="noopener noreferrer"
   className="absolute top-6 right-6 z-50 text-zinc-300 hover:text-emerald-400 transition-colors duration-200"
