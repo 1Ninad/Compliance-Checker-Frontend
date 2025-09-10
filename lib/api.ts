@@ -1,6 +1,6 @@
 import axios from "axios"
 
-const API_BASE_URL = "https://compliancecheckerbackend-production.up.railway.app/api"
+const API_BASE_URL = "http://localhost:8080/api"
 
 export const uploadPDF = async (file: File) => {
   const formData = new FormData()

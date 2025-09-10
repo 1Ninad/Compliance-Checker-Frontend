@@ -12,7 +12,12 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import type { ComplianceReport as ComplianceReportType } from "@/types"
 
-const API_BASE_URL = "https://compliancecheckerbackend-production.up.railway.app/api"
+//const API_BASE_URL = "http://localhost:8080/api"
+
+// READ FROM ENV (set in Vercel)
+// In dev, .env.local will provide the value
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`
+
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
