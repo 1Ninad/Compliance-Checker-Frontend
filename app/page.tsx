@@ -1,46 +1,43 @@
 "use client"
-import { useState } from "react"
+
 import type React from "react"
-import { Upload, FileText, Loader2, AlertCircle} from "lucide-react"
-
+import { useState, useRef } from "react"
+import { Upload, FileText } from "lucide-react"
 import { FaGithub } from "react-icons/fa";
-
-import axios from "axios"
-import { motion, AnimatePresence } from "framer-motion"
-import ComplianceReport from "@/components/compliance-report"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { ComplianceReport as ComplianceReportComponent } from "@/components/compliance-report"
 import type { ComplianceReport as ComplianceReportType } from "@/types"
 
-//const API_BASE_URL = "http://localhost:8080/api"
-
-// READ FROM ENV (set in Vercel)
-// In dev, .env.local will provide the value
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`
 
-export default function Home() {
+export default function IEEEComplianceChecker() {
   const [file, setFile] = useState<File | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisComplete, setAnalysisComplete] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [report, setReport] = useState<ComplianceReportType | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [progress, setProgress] = useState(0)
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(true)
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
   }
 
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(false)
-  }
+    e.stopPropagation()
+    setDragActive(false)
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0]
       if (droppedFile.type === "application/pdf") {
         setFile(droppedFile)
@@ -52,10 +49,10 @@ export default function Home() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0]
-      if (selectedFile.type === "application/pdf") {
-        setFile(selectedFile)
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0]
+      if (selected.type === "application/pdf") {
+        setFile(selected)
         setError(null)
       } else {
         setError("Please upload a PDF file")
@@ -63,204 +60,238 @@ export default function Home() {
     }
   }
 
-  const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a file first")
-      return
-    }
+  const analyzeFile = async () => {
+    if (!file) return
 
-    setIsUploading(true)
-    setError(null)
+    setIsAnalyzing(true)
     setProgress(0)
+    setError(null)
 
-    // Start progress simulation
-    const progressInterval = setInterval(() => {
+    // progress simulation
+    progressIntervalRef.current = setInterval(() => {
       setProgress((prev) => {
-        const newProgress = prev + Math.random() * 15
-        return newProgress >= 95 ? 95 : newProgress 
+        if (prev >= 90) {
+          if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
+          return 90
+        }
+        return prev + Math.random() * 15
       })
-    }, 300)
+    }, 200)
 
     const formData = new FormData()
     formData.append("file", file)
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/pdf/upload`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      const url = `${API_BASE_URL}/pdf/upload`
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
       })
 
-      if (response.status === 200) {
-        setProgress(100)
-        setTimeout(() => {
-          setReport(response.data)
-        }, 500)
-      } else {
-        setError("Unexpected server response.")
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`)
       }
+
+      const contentType = response.headers.get("content-type") || ""
+      if (!contentType.includes("application/json")) {
+        const textResponse = await response.text()
+        throw new Error(
+          `Server returned non-JSON response. Please check if the API is running. Preview: ${textResponse.slice(0, 200)}`
+        )
+      }
+
+      const reportData: ComplianceReportType = await response.json()
+
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
+      setProgress(100)
+      setReport(reportData)
+
+      setTimeout(() => {
+        setIsAnalyzing(false)
+        setAnalysisComplete(true)
+      }, 500)
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error occurred during upload"    
-      setError(errorMessage)
-    } finally {
-      clearInterval(progressInterval)
-      setIsUploading(false)
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
+      setIsAnalyzing(false)
+      setProgress(0)
+      setReport(null)
+      setAnalysisComplete(false)
+      setError(err instanceof Error ? err.message : "Unexpected error during analysis")
     }
   }
 
-  const resetAll = () => {
+  const resetAnalysis = () => {
     setFile(null)
-    setIsUploading(false)
-    setReport(null)
+    setAnalysisComplete(false)
+    setIsAnalyzing(false)
     setProgress(0)
+    setReport(null)
     setError(null)
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 text-zinc-100 p-4 md:p-8">
-      <header className="max-w-5xl mx-auto mb-12">
-      <div className="flex items-center gap-3">
-  <h1 className="text-3xl md:text-4xl font-bold text-emerald-400 md:text-transparent md:bg-clip-text md:bg-gradient-to-r md:from-emerald-400 md:to-teal-500">
-    IEEE Compliance Checker
-  </h1>
-</div>
+  <div className="min-h-screen bg-background">
+    <header className="border-b bg-card/50 backdrop-blur-sm">
+      <div className="container mx-auto px-4 py-3 md:py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <FileText className="h-4 w-4 md:h-5 md:w-5" />
+            </div>
+            <div>
+              <h1 className="text-lg md:text-xl font-semibold text-foreground">
+                IEEE PDF Compliance Checker
+              </h1>
+              <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
+                Analyze IEEE formatting requirements
+              </p>
+            </div>
+          </div>
 
+          <a
+          href="https://github.com/1Ninad/Compliance-Checker-Backend"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open GitHub repository"
+          className="absolute top-6 right-6 z-50 text-black"
+          >
+          <FaGithub className="w-8 h-8" />
+          </a>
 
-        <a
-  href="https://github.com/1Ninad/Compliance-Checker-Backend"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="absolute top-6 right-6 z-50 text-zinc-300 hover:text-emerald-400 transition-colors duration-200"
->
-  <FaGithub className="w-8 h-8" />
-</a>
+          
+        </div>
+      </div>
+    </header>
 
-
-        <p className="mt-3 text-zinc-400 max-w-2xl">
-          Upload IEEE research paper PDF to analyze its compliance with IEEE formatting requirements
-        </p>
-      </header>
-
-      <main className="max-w-5xl mx-auto">
-        <AnimatePresence mode="wait">
-          {!file && !report ? (
-            <motion.div
-              key="upload"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.3 }}
-              className="mb-8"
-            >
+    <main className="container mx-auto px-4 py-8">
+      {!analysisComplete ? (
+        <div className="mx-auto max-w-2xl space-y-8">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Upload Your IEEE Paper</CardTitle>
+              <CardDescription>
+                Upload Research paper PDF to analyze its compliance with IEEE formatting requirements
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div
-                className={`border-2 border-dashed rounded-xl p-8 md:p-12 text-center transition-all duration-200 ${
-                  isDragging
-                    ? "border-emerald-400 bg-emerald-400/10"
-                    : "border-zinc-700 hover:border-zinc-500 bg-zinc-800/50"
+                className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                  dragActive
+                    ? "border-primary bg-primary/5"
+                    : file
+                      ? "border-accent bg-accent/5"
+                      : "border-border hover:border-primary/50"
                 }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <div className="flex flex-col items-center justify-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-zinc-700/50 flex items-center justify-center">
-                    <Upload className="h-8 w-8 text-emerald-400" />
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+
+                {file ? (
+                  <div className="space-y-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/10 mx-auto">
+                      <FileText className="h-6 w-6 text-black" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{file.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
                   </div>
-                  <h2 className="text-xl font-semibold">Drop your IEEE paper here</h2>
-                  
-                  <label htmlFor="file-upload">
-                    <div className="mt-4 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-zinc-900 font-medium rounded-lg cursor-pointer transition-colors duration-200">
-                      Click to browse PDF File
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mx-auto">
+                      <Upload className="h-6 w-6 text-muted-foreground" />
                     </div>
-                    <input id="file-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
-                  </label>
-
-                  {error && (
-                    <p className="mt-2 text-red-400 text-sm flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" /> {error}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="file-selected"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="mb-8"
-            >
-              <div className="bg-zinc-800/80 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-zinc-700">
-                {file && !report && (
-                  <div className="flex flex-col gap-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
-
-                      <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                        <FileText className="h-6 w-6 text-emerald-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-lg truncate">{file.name}</h3>
-                        <p className="text-zinc-400 text-sm">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                      </div>
-                      {!isUploading && (
-                        <Button
-                          onClick={handleUpload}
-                          className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-zinc-900"
-                          disabled={isUploading}
-                        >
-                          Check Compliance
-                        </Button>
-                      )}
+                    <div>
+                      <p className="font-medium text-foreground">Drop your PDF here</p>
+                      <p className="text-sm text-muted-foreground">or click to browse files</p>
                     </div>
-
-                    {isUploading && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-zinc-400">Analyzing document...</span>
-                          <span className="text-sm font-medium">{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-2 bg-zinc-700">
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </Progress>
-                        <div className="flex items-center gap-2 text-sm text-zinc-400">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {progress < 30
-                            ? "Scanning document structure..."
-                            : progress < 60
-                              ? "Checking IEEE formatting rules..."
-                              : progress < 90
-                                ? "Validating against IEEE standards..."
-                                : "Finalizing report..."}
-                        </div>
-                      </div>
-                    )}
-
-                    {error && (
-                      <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 flex items-start gap-2">
-                        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-medium">Error</p>
-                          <p className="text-sm">{error}</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
-                {report && <ComplianceReport report={report} onReset={resetAll} />}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
 
-      <footer className="max-w-5xl mx-auto mt-12 text-center text-zinc-500 text-sm">
-        <p>IEEE Compliance Checker</p>
-      </footer>
-    </div>
-  )
+              {isAnalyzing && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Analyzing compliance...</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <Progress value={progress} className="h-2" />
+                </div>
+              )}
+
+              {error && (
+                <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                  <p className="text-sm text-red-800">
+                    <strong>Error:</strong> {error}
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    Please ensure your backend API is running and accessible.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-center">
+                <Button onClick={analyzeFile} disabled={!file || isAnalyzing} className="w-full sm:w-auto" size="lg">
+                  {isAnalyzing ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    "Check Compliance"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/10">
+                    <FileText className="h-4 w-4 text-black" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Format Validation</p>
+                    <p className="text-sm text-muted-foreground">Check margins, fonts, spacing</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="sm:col-span-2 lg:col-span-1">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/10">
+                    <FileText className="h-4 w-4 text-black" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Structure Check</p>
+                    <p className="text-sm text-muted-foreground">Validate document sections</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : (
+        <ComplianceReportComponent report={report} fileName={file?.name || ""} onReset={resetAnalysis} />
+      )}
+    </main>
+  </div>
+);
 }

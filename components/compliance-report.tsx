@@ -1,171 +1,166 @@
 "use client"
 
-import { CheckCircle, AlertCircle } from "lucide-react"
-import type { ComplianceReport as ComplianceReportType } from "@/types"
-import { motion } from "framer-motion"
+import { CheckCircle, XCircle, FileText, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import type { ComplianceReport as ComplianceReportType } from "@/types"
 
 interface ComplianceReportProps {
-  report: ComplianceReportType
+  report: ComplianceReportType | null
+  fileName: string
   onReset: () => void
 }
 
-export default function ComplianceReport({ report, onReset }: ComplianceReportProps) {
-  const items = report.items || []
-  const isCompliant = items.every((item) => item.status === "pass")
-
-  const summary = report.summary || {
-    passCount: items.filter((item) => item.status === "pass").length,
-    failCount: items.filter((item) => item.status === "fail").length,
+export function ComplianceReport({ report, fileName, onReset }: ComplianceReportProps) {
+  if (!report) {
+    return (
+      <div className="mx-auto max-w-4xl text-center">
+        <p className="text-muted-foreground">No report data available</p>
+        <Button onClick={onReset} className="mt-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+      </div>
+    )
   }
 
-  // Calculate compliance score percentage
-  const totalRules = summary.passCount + summary.failCount
-  const complianceScore = totalRules > 0 ? Math.round((summary.passCount / totalRules) * 100) : 0
+  const failedItems = report.items.filter((item) => item.status === "fail")
+  const passedItems = report.items.filter((item) => item.status === "pass")
 
-  // Group items by status for better organization
-  const passedItems = items.filter((item) => item.status === "pass")
-  const failedItems = items.filter((item) => item.status === "fail")
+  const totalChecks = report.items.length
+  const passedChecks = passedItems.length
+  const failedChecks = failedItems.length
+
+  const overallScore = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 0
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "pass":
+        return <CheckCircle className="h-4 w-4 text-green-600" />
+      case "fail":
+        return <XCircle className="h-4 w-4 text-red-600" />
+      default:
+        return null
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pass":
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+            Pass
+          </Badge>
+        )
+      case "fail":
+        return <Badge variant="destructive">Fail</Badge>
+      default:
+        return null
+    }
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-    >
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">IEEE Compliance Report</h2>
-        <Button
-  variant="outline"
-  onClick={onReset}
-  className="border-none mt-4 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-zinc-900 font-medium rounded-lg cursor-pointer transition-colors duration-200"
->
-  Check Another PDF
-</Button>
-
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6 flex flex-col items-center justify-center">
-          <div className="relative mb-2">
-            <svg className="w-24 h-24" viewBox="0 0 100 100">
-              <circle
-                className="text-zinc-700"
-                strokeWidth="8"
-                stroke="currentColor"
-                fill="transparent"
-                r="42"
-                cx="50"
-                cy="50"
-              />
-              <circle
-                className={`${isCompliant ? "text-emerald-400" : complianceScore > 50 ? "text-amber-400" : "text-red-400"}`}
-                strokeWidth="8"
-                stroke="currentColor"
-                fill="transparent"
-                r="42"
-                cx="50"
-                cy="50"
-                strokeDasharray="264"
-                strokeDashoffset={264 - (264 * complianceScore) / 100}
-                strokeLinecap="round"
-                transform="rotate(-90 50 50)"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl font-bold">{complianceScore}%</span>
-            </div>
-          </div>
-          <h3 className="text-lg font-medium">Compliance Score</h3>
-        </div>
-
-        <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6">
-          <h3 className="text-lg font-medium mb-4">Summary</h3>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              
-              <div>
-                <p className="text-sm text-zinc-400">Passed Rules</p>
-                <p className="text-xl font-semibold">{summary.passCount}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              
-              <div>
-                <p className="text-sm text-zinc-400">Failed Rules</p>
-                <p className="text-xl font-semibold">{summary.failCount}</p>
-              </div>
-            </div>
+    <div className="mx-auto max-w-4xl space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={onReset}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Compliance Report</h1>
+            <p className="text-muted-foreground">{fileName}</p>
           </div>
         </div>
-
-        <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6">
-          <h3 className="text-lg font-medium mb-4">Compliance Status</h3>
-          <div className="flex flex-col h-[calc(100%-2rem)] justify-center">
-            {isCompliant ? (
-              <div className="flex items-center gap-3 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
-                
-                <p className="text-emerald-300 font-medium">This document is fully IEEE compliant</p>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-                
-                <p className="text-red-300 font-medium">This document is not IEEE compliant</p>
-              </div>
-            )}
-          </div>
+        <div className="text-right">
+          <div className="text-3xl font-bold text-foreground">{overallScore}%</div>
+          <p className="text-sm text-muted-foreground">Overall Score</p>
         </div>
       </div>
 
-      {failedItems.length > 0 && (
-        <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6 mb-6">
-          <h3 className="text-lg font-medium mb-4 text-red-400 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            Failed Rules
-          </h3>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-zinc-700">
-                <TableHead className="text-zinc-300">Rule</TableHead>
-                <TableHead className="text-zinc-300">Issue</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {failedItems.map((item, index) => (
-                <TableRow key={index} className="border-zinc-700">
-                  <TableCell className="font-medium text-zinc-200">{item.rule}</TableCell>
-                  <TableCell className="text-red-400">{item.message}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      {/* Summary Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Analysis Summary
+          </CardTitle>
+          <CardDescription>Your document has been analyzed against IEEE formatting standards</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between text-sm">
+            <span>Compliance Progress</span>
+            <span>
+              {passedChecks} of {totalChecks} checks passed
+            </span>
+          </div>
+          <Progress value={overallScore} className="h-2" />
 
-      <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6">
-        <h3 className="text-lg font-medium mb-4 text-emerald-400 flex items-center gap-2">
-          <CheckCircle className="h-5 w-5" />
-          Passed Rules
-        </h3>
-        <Table>
-          <TableHeader>
-            <TableRow className="border-zinc-700">
-              <TableHead className="text-zinc-300">Rule</TableHead>
-              <TableHead className="text-zinc-300">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {passedItems.map((item, index) => (
-              <TableRow key={index} className="border-zinc-700">
-                <TableCell className="font-medium text-zinc-200">{item.rule}</TableCell>
-                <TableCell className="text-emerald-400">{item.message}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{passedChecks}</div>
+              <div className="text-sm text-muted-foreground">Passed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{failedChecks}</div>
+              <div className="text-sm text-muted-foreground">Failed</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-6">
+        {failedChecks > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg text-red-600">Failed Checks ({failedChecks})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {failedItems.map((item, itemIndex) => (
+                  <div key={itemIndex} className="flex items-start gap-3 p-3 rounded-lg border bg-card/50">
+                    <div className="mt-0.5">{getStatusIcon(item.status)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-foreground">{item.rule}</h4>
+                        {getStatusBadge(item.status)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{item.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {passedChecks > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg text-green-600">Passed Checks ({passedChecks})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {passedItems.map((item, itemIndex) => (
+                  <div key={itemIndex} className="flex items-start gap-3 p-3 rounded-lg border bg-card/50">
+                    <div className="mt-0.5">{getStatusIcon(item.status)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-foreground">{item.rule}</h4>
+                        {getStatusBadge(item.status)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{item.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-    </motion.div>
+    </div>
   )
 }
