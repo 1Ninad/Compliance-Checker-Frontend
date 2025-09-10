@@ -18,7 +18,6 @@ import type { ComplianceReport as ComplianceReportType } from "@/types"
 // In dev, .env.local will provide the value
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`
 
-
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
